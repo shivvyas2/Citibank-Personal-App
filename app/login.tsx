@@ -10,38 +10,34 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '@/contexts/AuthContext';
+import CitiLogo from '@/components/citi-logo';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [loginMethod, setLoginMethod] = useState<'tokens' | 'app'>('tokens');
+  const [enableSnapshot, setEnableSnapshot] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter both Email and Password');
-      return;
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      Alert.alert('Error', 'Please enter a valid email address');
+    if (!userId.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter both User ID and Password');
       return;
     }
 
     setIsLoading(true);
     try {
-      await login(email.trim(), password);
-      console.log('✅ Internal API login successful');
+      // Use userId as email for login
+      await login(userId.trim(), password);
+      console.log('✅ Login successful');
       router.replace('/(tabs)');
     } catch (error: any) {
       Alert.alert('Login Failed', error.message || 'An error occurred during login');
@@ -52,6 +48,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#0066CC" translucent={false} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
@@ -59,8 +56,7 @@ export default function LoginScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled">
           
-
-          {/* FDIC Information */}
+          {/* FDIC Information Banner */}
           <View style={styles.fdicContainer}>
             <View style={styles.fdicRow}>
               <Text style={styles.fdicText}>FDIC</Text>
@@ -71,61 +67,32 @@ export default function LoginScreen() {
             <Text style={styles.citibankName}>Citibank, N.A.</Text>
           </View>
 
-          {/* Welcome Section */}
-          <View style={styles.welcomeSection}>
-            <Text style={styles.welcomeText}>Welcome to</Text>
-            <Text style={styles.appTitle}>CitiBusiness® Online Mobile</Text>
-            <Text style={styles.appDescription}>
-              Access to Mobile Tokens & CitiBusiness Mobile Banking App
-            </Text>
-          </View>
-
-          {/* Login Method Selection */}
-          <View style={styles.loginMethodContainer}>
-            <TouchableOpacity
-              style={[styles.methodButton, loginMethod === 'tokens' && styles.methodButtonActive]}
-              onPress={() => setLoginMethod('tokens')}>
-              <Text style={[styles.methodButtonText, loginMethod === 'tokens' && styles.methodButtonTextActive]}>
-                Mobile Tokens
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.methodButton, loginMethod === 'app' && styles.methodButtonActive]}
-              onPress={() => setLoginMethod('app')}>
-              <Text style={[styles.methodButtonText, loginMethod === 'app' && styles.methodButtonTextActive]}>
-                Mobile App
-              </Text>
-            </TouchableOpacity>
+          {/* Citi Logo */}
+          <View style={styles.logoContainer}>
+            <CitiLogo size={48} color="white" />
           </View>
 
           {/* Login Form */}
-          <View style={styles.formCard}>
+          <View style={styles.formContainer}>
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>
-                <Text style={styles.asterisk}>*</Text> Email
-              </Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#999"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!isLoading}
-                />
-              </View>
+              <Text style={styles.label}>User ID</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your User ID"
+                placeholderTextColor="#999"
+                value={userId}
+                onChangeText={setUserId}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!isLoading}
+              />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>
-                <Text style={styles.asterisk}>*</Text> Password
-              </Text>
-              <View style={styles.inputWrapper}>
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.passwordContainer}>
                 <TextInput
-                  style={styles.input}
+                  style={styles.passwordInput}
                   placeholder="Enter your password"
                   placeholderTextColor="#999"
                   value={password}
@@ -137,36 +104,66 @@ export default function LoginScreen() {
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}>
-                  <IconSymbol
-                    name={showPassword ? 'eye.slash' : 'eye'}
-                    size={18}
-                    color="#666"
-                  />
+                  style={styles.showButton}>
+                  <Text style={styles.showButtonText}>Show</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
-            <TouchableOpacity style={styles.forgotPasswordLink}>
-              <Text style={styles.forgotPasswordText}>Forgot Password</Text>
-            </TouchableOpacity>
+            {/* Enable Snapshot Checkbox */}
+            <View style={styles.checkboxContainer}>
+              <TouchableOpacity
+                style={styles.checkbox}
+                onPress={() => setEnableSnapshot(!enableSnapshot)}>
+                {enableSnapshot && (
+                  <IconSymbol name="checkmark" size={16} color="#0066CC" />
+                )}
+              </TouchableOpacity>
+              <Text style={styles.checkboxLabel}>Enable Snapshot</Text>
+              <TouchableOpacity style={styles.helpButton}>
+                <IconSymbol name="questionmark.circle" size={18} color="#666" />
+              </TouchableOpacity>
+            </View>
 
+            {/* Sign On Button */}
             <TouchableOpacity
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+              style={[styles.signOnButton, isLoading && styles.signOnButtonDisabled]}
               onPress={handleLogin}
               disabled={isLoading}>
               {isLoading ? (
-                <ActivityIndicator color="white" />
+                <ActivityIndicator color="#0066CC" />
               ) : (
-                <Text style={styles.loginButtonText}>Log In</Text>
+                <Text style={styles.signOnButtonText}>Sign On</Text>
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.switchAccountsLink}>
-              <Text style={styles.switchAccountsText}>Switch Accounts</Text>
-            </TouchableOpacity>
+            {/* Forgot Links */}
+            <View style={styles.forgotContainer}>
+              <TouchableOpacity>
+                <Text style={styles.forgotLink}>Forgot User ID</Text>
+              </TouchableOpacity>
+              <TouchableOpacity>
+                <Text style={styles.forgotLink}>Forgot Password</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
+
+        {/* Bottom Navigation */}
+        <View style={styles.bottomNav}>
+          <TouchableOpacity style={styles.bottomNavItem}>
+            <IconSymbol name="mappin.circle" size={24} color="white" />
+            <Text style={styles.bottomNavText}>Find ATM</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.bottomNavItem}>
+            <IconSymbol name="qrcode" size={24} color="white" />
+            <Text style={styles.bottomNavText}>Register</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.bottomNavItem}>
+            <IconSymbol name="questionmark.circle" size={24} color="white" />
+            <Text style={styles.bottomNavText}>Support</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -175,7 +172,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#0066CC',
   },
   keyboardView: {
     flex: 1,
@@ -183,12 +180,13 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 24,
-    paddingTop: 40,
   },
   fdicContainer: {
+    backgroundColor: 'white',
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 8,
+    paddingBottom: 12,
+    marginBottom: 40,
   },
   fdicRow: {
     flexDirection: 'row',
@@ -214,128 +212,127 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 4,
   },
-  welcomeSection: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 16,
-  },
-  welcomeText: {
-    fontSize: 16,
-    color: '#000',
-    marginBottom: 4,
-  },
-  appTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000',
-    marginBottom: 8,
-  },
-  appDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  loginMethodContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 8,
-    padding: 4,
-  },
-  methodButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 6,
+  logoContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 60,
+    marginTop: 20,
   },
-  methodButtonActive: {
-    backgroundColor: '#0066CC',
-  },
-  methodButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#0066CC',
-  },
-  methodButtonTextActive: {
-    color: 'white',
-  },
-  formCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    marginHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+  formContainer: {
+    paddingHorizontal: 20,
   },
   inputContainer: {
     marginBottom: 20,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#0066CC',
+    fontWeight: '500',
+    color: 'white',
     marginBottom: 8,
   },
-  asterisk: {
-    color: '#FF3B30',
+  input: {
+    backgroundColor: '#E6F4FE',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#000',
+    borderWidth: 1,
+    borderColor: '#B3D9F2',
   },
-  inputWrapper: {
+  passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
+    backgroundColor: '#E6F4FE',
     borderRadius: 8,
-    backgroundColor: '#FAFAFA',
+    borderWidth: 1,
+    borderColor: '#B3D9F2',
   },
-  input: {
+  passwordInput: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     fontSize: 16,
     color: '#000',
   },
-  eyeIcon: {
-    padding: 12,
+  showButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  forgotPasswordLink: {
-    alignSelf: 'flex-end',
-    marginBottom: 20,
-  },
-  forgotPasswordText: {
+  showButtonText: {
     fontSize: 14,
     color: '#0066CC',
     fontWeight: '500',
   },
-  loginButton: {
-    backgroundColor: '#0066CC',
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: 'white',
+    borderRadius: 4,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  checkboxLabel: {
+    fontSize: 14,
+    color: 'white',
+    flex: 1,
+  },
+  helpButton: {
+    padding: 4,
+  },
+  signOnButton: {
+    backgroundColor: 'white',
     borderRadius: 8,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  loginButtonDisabled: {
+  signOnButtonDisabled: {
     opacity: 0.6,
   },
-  loginButtonText: {
-    color: 'white',
+  signOnButtonText: {
+    color: '#0066CC',
     fontSize: 18,
     fontWeight: '600',
   },
-  switchAccountsLink: {
-    alignSelf: 'center',
+  forgotContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
   },
-  switchAccountsText: {
+  forgotLink: {
     fontSize: 14,
-    color: '#0066CC',
+    color: 'white',
+    fontWeight: '500',
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  bottomNavItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  bottomNavText: {
+    fontSize: 12,
+    color: 'white',
+    marginTop: 4,
     fontWeight: '500',
   },
 });
+

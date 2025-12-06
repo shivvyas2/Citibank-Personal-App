@@ -99,7 +99,7 @@ export default function RootLayout() {
           <SidebarProvider>
             <RootLayoutNav />
             <Drawer />
-            <StatusBar style="auto" />
+            <StatusBar style="light" backgroundColor="#0066CC" />
           </SidebarProvider>
         </AuthProvider>
       </ThemeProvider>

@@ -18,50 +18,25 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
         tabBarStyle: {
           backgroundColor: 'white',
-          borderTopWidth: 0,
-          height: 90,
-          paddingBottom: 24,
-          paddingTop: 12,
-          paddingHorizontal: 16,
-          marginHorizontal: 12,
-          marginBottom: 12,
-          borderRadius: 24,
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: -2,
-          },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-          elevation: 12,
+          borderTopWidth: 1,
+          borderTopColor: '#E5E5E5',
+          height: 80,
+          paddingBottom: 20,
+          paddingTop: 8,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          marginTop: 6,
-          letterSpacing: 0.2,
+          fontSize: 12,
+          fontWeight: '500',
+          marginTop: 4,
         },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={styles.iconContainer}>
-              <IconSymbol size={24} name="house.fill" color={focused ? '#0066CC' : color} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="accounts"
-        options={{
           title: 'Accounts',
           tabBarIcon: ({ color, focused }) => (
             <View style={styles.iconContainer}>
-              <IconSymbol size={24} name="building.2.fill" color={focused ? '#0066CC' : color} />
+              <IconSymbol size={24} name="line.3.horizontal" color={focused ? '#0066CC' : color} />
             </View>
           ),
         }}
@@ -71,8 +46,8 @@ export default function TabLayout() {
         options={{
           title: 'Credit Journey',
           tabBarIcon: ({ color, focused }) => (
-            <View style={styles.centerIconContainer}>
-              <IconSymbol size={28} name="chart.bar.fill" color={focused ? '#0066CC' : '#666'} />
+            <View style={styles.iconContainer}>
+              <IconSymbol size={24} name="chart.bar.fill" color={focused ? '#0066CC' : color} />
             </View>
           ),
         }}
@@ -80,33 +55,39 @@ export default function TabLayout() {
       <Tabs.Screen
         name="approvals"
         options={{
-          title: 'Approvals',
+          title: 'Services',
           tabBarIcon: ({ color, focused }) => (
             <View style={styles.iconContainer}>
-              <IconSymbol size={24} name="checkmark.circle.fill" color={focused ? '#0066CC' : color} />
+              <IconSymbol size={24} name="star" color={focused ? '#0066CC' : color} />
             </View>
           ),
         }}
       />
       <Tabs.Screen
-        name="pay-transfer"
+        name="more"
         options={{
-          title: 'Payments',
+          title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
             <View style={styles.iconContainer}>
-              <IconSymbol size={24} name="arrow.left.arrow.right" color={focused ? '#0066CC' : color} />
+              <IconSymbol size={24} name="person" color={focused ? '#0066CC' : color} />
             </View>
           ),
         }}
       />
       <Tabs.Screen
-        name="deposits"
+        name="accounts"
         options={{
           href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
-        name="more"
+        name="pay-transfer"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="deposits"
         options={{
           href: null, // Hide from tab bar
         }}
@@ -119,17 +100,6 @@ const styles = StyleSheet.create({
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
-    minWidth: 48,
-    minHeight: 48,
-    marginHorizontal: 4,
-  },
-  centerIconContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 10,
-    minWidth: 56,
-    minHeight: 56,
-    marginHorizontal: 4,
+    padding: 4,
   },
 });
