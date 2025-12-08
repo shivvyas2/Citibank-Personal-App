@@ -1,12 +1,7 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllCitibankBusinessCards, getCardApplyUrl, getCardDetailsUrl, getCardImageSource, type CitibankBusinessCard } from '@/data/citibankBusinessCards';
+import { getAllCitibankPersonalCards, getPersonalCardById, getPersonalCardApplyUrl, getPersonalCardDetailsUrl, getPersonalCardImageSource, type CitibankPersonalCard } from '@/data/citibankPersonalCards';
 import { useCreditProfile } from '@/hooks/useCreditProfile';
-import {
-    calculateCitibankApprovalLikelihood,
-    extractApprovalData,
-    type CitibankCardProfile
-} from '@/services/citibankApprovalService';
 import { trackCardApplication } from '@/services/profileService';
 import BottomSheet, { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -49,7 +44,7 @@ export default function CreditJourneyScreen() {
   const [activeTab, setActiveTab] = useState('credit');
   const [activeSubTab, setActiveSubTab] = useState('overview');
   const [activeScoreType, setActiveScoreType] = useState('fsr');
-  const [accountType, setAccountType] = useState<'personal' | 'business'>('business');
+  const accountType = 'personal'; // Always personal for consumer app
   const bottomSheetRef = useRef<BottomSheet>(null);
   // Responsive snap points based on screen size
   const snapPoints = useMemo(() => {
@@ -806,42 +801,6 @@ export default function CreditJourneyScreen() {
         </View>
       </View>
 
-      {/* Personal/Business Toggle */}
-      <View style={styles.accountTypeContainer}>
-        <View style={styles.segmentControl}>
-          <TouchableOpacity
-            style={[
-              styles.segmentButton,
-              accountType === 'personal' && styles.segmentButtonActive
-            ]}
-            onPress={() => {
-              setAccountType('personal');
-            }}
-          >
-            <Text style={[
-              styles.segmentButtonText,
-              accountType === 'personal' && styles.segmentButtonTextActive
-            ]}>
-              Personal
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.segmentButton,
-              accountType === 'business' && styles.segmentButtonActive
-            ]}
-            onPress={() => setAccountType('business')}
-          >
-            <Text style={[
-              styles.segmentButtonText,
-              accountType === 'business' && styles.segmentButtonTextActive
-            ]}>
-              Business
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {/* Main Navigation Tabs */}
       <View style={styles.tabContainer}>
         <TouchableOpacity 
@@ -885,16 +844,6 @@ export default function CreditJourneyScreen() {
                   const currentDate = new Date();
                   const formattedDate = `${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getDate().toString().padStart(2, '0')}/${currentDate.getFullYear().toString().slice(-2)}`;
                   
-                  if (accountType === 'business' && profile?.data?.business?.[0]?.name) {
-                    return (
-                      <View>
-                        <Text style={styles.businessName}>
-                          {profile.data.business[0].name}
-                        </Text>
-                        <Text style={styles.scoreDate}>as of {formattedDate}</Text>
-                      </View>
-                    );
-                  }
                   return (
                     <Text style={styles.scoreDate}>As of {formattedDate}</Text>
                   );
@@ -904,28 +853,6 @@ export default function CreditJourneyScreen() {
                 <Text style={styles.scoreHistory}>See score history {'>'}</Text>
               </TouchableOpacity>
             </View>
-            
-            {/* Score Type Tabs - Only show for Business */}
-            {accountType === 'business' && (
-            <View style={styles.scoreTypeTabsContainer}>
-              <TouchableOpacity 
-                style={[styles.scoreTypeTab, activeScoreType === 'fsr' && styles.activeScoreTypeTab]}
-                onPress={() => setActiveScoreType('fsr')}
-              >
-                <Text style={[styles.scoreTypeTabText, activeScoreType === 'fsr' && styles.activeScoreTypeTabText]}>
-                  FSR Score
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.scoreTypeTab, activeScoreType === 'intelliscore' && styles.activeScoreTypeTab]}
-                onPress={() => setActiveScoreType('intelliscore')}
-              >
-                <Text style={[styles.scoreTypeTabText, activeScoreType === 'intelliscore' && styles.activeScoreTypeTabText]}>
-                  Intelliscore
-                </Text>
-              </TouchableOpacity>
-            </View>
-            )}
             
             {/* Display selected meter */}
             {isLoading ? (
@@ -940,7 +867,7 @@ export default function CreditJourneyScreen() {
                   <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
               </View>
-            ) : accountType === 'personal' ? (
+            ) : (
               // Personal Credit Score (VantageScore 3.0 / FICO - 300-850 range)
               <CreditScoreGauge 
                 score={personalScoreData.score}
@@ -950,26 +877,6 @@ export default function CreditJourneyScreen() {
                 scoreType={personalScoreData.scoreType}
                 provider={personalScoreData.provider}
                 maxScore={850}
-              />
-            ) : activeScoreType === 'fsr' ? (
-              // Business FSR Score
-              <CreditScoreGauge 
-                score={businessInsights.score || 35}
-                category={getFSRRiskCategory(businessInsights.score || 35)}
-                change={5}
-                scoreType="FSR Score"
-                provider="Experian"
-                maxScore={100}
-              />
-            ) : (
-              // Business Intelliscore
-              <CreditScoreGauge 
-                score={experianDataDestructured?.scoreInformation?.commercialScore?.score || experianDataDestructured?.scoreInformation?.fsrScore?.score || 65}
-                category={getIntelliscoreRiskCategory(experianDataDestructured?.scoreInformation?.commercialScore?.score || experianDataDestructured?.scoreInformation?.fsrScore?.score || 65)}
-                change={8}
-                scoreType="Intelliscore v2"
-                provider="Experian"
-                maxScore={100}
               />
             )}
           </View>
@@ -1534,16 +1441,6 @@ export default function CreditJourneyScreen() {
                   const currentDate = new Date();
                   const formattedDate = `${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getDate().toString().padStart(2, '0')}/${currentDate.getFullYear().toString().slice(-2)}`;
                   
-                  if (accountType === 'business' && profile?.data?.business?.[0]?.name) {
-                    return (
-                      <View>
-                        <Text style={styles.businessName}>
-                          {profile.data.business[0].name}
-                        </Text>
-                        <Text style={styles.scoreDate}>as of {formattedDate}</Text>
-                      </View>
-                    );
-                  }
                   return (
                     <Text style={styles.scoreDate}>As of {formattedDate}</Text>
                   );
@@ -1553,28 +1450,6 @@ export default function CreditJourneyScreen() {
                 <Text style={styles.scoreHistory}>See score history {'>'}</Text>
               </TouchableOpacity>
             </View>
-            
-            {/* Score Type Tabs - Only show for Business */}
-            {accountType === 'business' && (
-              <View style={styles.scoreTypeTabsContainer}>
-                <TouchableOpacity 
-                  style={[styles.scoreTypeTab, activeScoreType === 'fsr' && styles.activeScoreTypeTab]}
-                  onPress={() => setActiveScoreType('fsr')}
-                >
-                  <Text style={[styles.scoreTypeTabText, activeScoreType === 'fsr' && styles.activeScoreTypeTabText]}>
-                    FSR Score
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.scoreTypeTab, activeScoreType === 'intelliscore' && styles.activeScoreTypeTab]}
-                  onPress={() => setActiveScoreType('intelliscore')}
-                >
-                  <Text style={[styles.scoreTypeTabText, activeScoreType === 'intelliscore' && styles.activeScoreTypeTabText]}>
-                    Intelliscore
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
             
             {/* Display selected meter */}
             {isLoading ? (
@@ -1589,7 +1464,7 @@ export default function CreditJourneyScreen() {
                   <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
               </View>
-            ) : accountType === 'personal' ? (
+            ) : (
               <CreditScoreGauge 
                 score={personalScoreData.score}
                 category={getPersonalScoreCategory(personalScoreData.score)}
@@ -1598,24 +1473,6 @@ export default function CreditJourneyScreen() {
                 scoreType={personalScoreData.scoreType}
                 provider={personalScoreData.provider}
                 maxScore={850}
-              />
-            ) : activeScoreType === 'fsr' ? (
-              <CreditScoreGauge 
-                score={businessInsights.score || 35}
-                category={getFSRRiskCategory(businessInsights.score || 35)}
-                change={5}
-                scoreType="FSR Score"
-                provider="Experian"
-                maxScore={100}
-              />
-            ) : (
-              <CreditScoreGauge 
-                score={experianDataDestructured?.scoreInformation?.commercialScore?.score || experianDataDestructured?.scoreInformation?.fsrScore?.score || 65}
-                category={getIntelliscoreRiskCategory(experianDataDestructured?.scoreInformation?.commercialScore?.score || experianDataDestructured?.scoreInformation?.fsrScore?.score || 65)}
-                change={8}
-                scoreType="Intelliscore v2"
-                provider="Experian"
-                maxScore={100}
               />
             )}
           </View>
@@ -1748,16 +1605,6 @@ export default function CreditJourneyScreen() {
                   const currentDate = new Date();
                   const formattedDate = `${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getDate().toString().padStart(2, '0')}/${currentDate.getFullYear().toString().slice(-2)}`;
                   
-                  if (accountType === 'business' && profile?.data?.business?.[0]?.name) {
-                    return (
-                      <View>
-                        <Text style={styles.businessName}>
-                          {profile.data.business[0].name}
-                        </Text>
-                        <Text style={styles.scoreDate}>as of {formattedDate}</Text>
-                      </View>
-                    );
-                  }
                   return (
                     <Text style={styles.scoreDate}>As of {formattedDate}</Text>
                   );
@@ -1767,28 +1614,6 @@ export default function CreditJourneyScreen() {
                 <Text style={styles.scoreHistory}>See score history {'>'}</Text>
               </TouchableOpacity>
             </View>
-            
-            {/* Score Type Tabs - Only show for Business */}
-            {accountType === 'business' && (
-              <View style={styles.scoreTypeTabsContainer}>
-                <TouchableOpacity 
-                  style={[styles.scoreTypeTab, activeScoreType === 'fsr' && styles.activeScoreTypeTab]}
-                  onPress={() => setActiveScoreType('fsr')}
-                >
-                  <Text style={[styles.scoreTypeTabText, activeScoreType === 'fsr' && styles.activeScoreTypeTabText]}>
-                    FSR Score
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.scoreTypeTab, activeScoreType === 'intelliscore' && styles.activeScoreTypeTab]}
-                  onPress={() => setActiveScoreType('intelliscore')}
-                >
-                  <Text style={[styles.scoreTypeTabText, activeScoreType === 'intelliscore' && styles.activeScoreTypeTabText]}>
-                    Intelliscore
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
             
             {/* Display selected meter */}
             {isLoading ? (
@@ -1803,7 +1628,7 @@ export default function CreditJourneyScreen() {
                   <Text style={styles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
               </View>
-            ) : accountType === 'personal' ? (
+            ) : (
               <CreditScoreGauge 
                 score={personalScoreData.score}
                 category={getPersonalScoreCategory(personalScoreData.score)}
@@ -1812,24 +1637,6 @@ export default function CreditJourneyScreen() {
                 scoreType={personalScoreData.scoreType}
                 provider={personalScoreData.provider}
                 maxScore={850}
-              />
-            ) : activeScoreType === 'fsr' ? (
-              <CreditScoreGauge 
-                score={businessInsights.score || 35}
-                category={getFSRRiskCategory(businessInsights.score || 35)}
-                change={5}
-                scoreType="FSR Score"
-                provider="Experian"
-                maxScore={100}
-              />
-            ) : (
-              <CreditScoreGauge 
-                score={experianDataDestructured?.scoreInformation?.commercialScore?.score || experianDataDestructured?.scoreInformation?.fsrScore?.score || 65}
-                category={getIntelliscoreRiskCategory(experianDataDestructured?.scoreInformation?.commercialScore?.score || experianDataDestructured?.scoreInformation?.fsrScore?.score || 65)}
-                change={8}
-                scoreType="Intelliscore v2"
-                provider="Experian"
-                maxScore={100}
               />
             )}
           </View>
@@ -1846,13 +1653,13 @@ export default function CreditJourneyScreen() {
         >
           <BottomSheetScrollView contentContainerStyle={styles.sheetContent} showsVerticalScrollIndicator={false}>
           <View style={styles.offersHeader}>
-            <Text style={styles.offersTitle}>Business Credit Offers</Text>
+            <Text style={styles.offersTitle}>Credit Card Offers</Text>
             <Text style={styles.offersSubtitle}>
               {isLoading 
                 ? 'Loading recommendations...' 
                 : recommendations?.recommendations?.length 
                   ? `You have ${recommendations.recommendations.length} personalized recommendations`
-                  : 'You are qualified for Citibank Business cards'}
+                  : 'Explore Citibank Personal credit cards'}
             </Text>
             {!isLoading && error && (
               <TouchableOpacity onPress={refresh} style={styles.retryButton}>
@@ -1877,11 +1684,7 @@ export default function CreditJourneyScreen() {
             <>
               {/* AI Recommendation Summary - Compact */}
               {(() => {
-                // Filter to show only Costco cards by default
-                const allCitibankCards = getAllCitibankBusinessCards().filter(card => 
-                  card.id === 'costco-anywhere-visa-citi' || 
-                  card.id === 'costco-anywhere-visa-business-citi'
-                );
+                const allCitibankCards = getAllCitibankPersonalCards();
                 const apiRecommendations = recommendations?.recommendations || [];
                 const totalCards = apiRecommendations.length + allCitibankCards.length;
                 
@@ -1893,7 +1696,7 @@ export default function CreditJourneyScreen() {
                       <Text style={styles.aiSummaryTitle}>
                           {apiRecommendations.length > 0 
                             ? `${apiRecommendations.length} Personalized + ${allCitibankCards.length} Available Cards`
-                            : `${allCitibankCards.length} Citibank Business Cards Available`}
+                            : `${allCitibankCards.length} Citibank Personal Cards Available`}
                       </Text>
                     </View>
                       {recommendations?.score && (
@@ -1906,35 +1709,30 @@ export default function CreditJourneyScreen() {
                 );
               })()}
 
-              {/* Combine API recommendations with all Citibank business cards */}
+              {/* Combine API recommendations with all Citibank personal cards */}
               {(() => {
-                // Get all Citibank business cards - filter to show only Costco cards by default
-                const allCitibankCards = getAllCitibankBusinessCards().filter(card => 
-                  card.id === 'costco-anywhere-visa-citi' || 
-                  card.id === 'costco-anywhere-visa-business-citi'
-                );
+                // Get all Citibank personal cards
+                const allCitibankCards = getAllCitibankPersonalCards();
                 
                 // Merge API recommendations with all cards
                 const apiRecommendations = recommendations?.recommendations || [];
-                // API recommendations use cardId, static cards use both cardId and id - check all
                 const apiCardIds = new Set(apiRecommendations.map((r: any) => r.cardId || r.id));
                 
                 // Helper function to match API recommendation cardName with static card
-                const matchCardByName = (cardName: string): CitibankBusinessCard | undefined => {
+                const matchCardByName = (cardName: string): CitibankPersonalCard | undefined => {
                   if (!cardName) return undefined;
-                  // Normalize card names by removing "Citibank" prefix and extra spaces
                   const normalizeName = (name: string): string => {
                     return name.toLowerCase()
-                      .replace(/^citibank\s+/i, '') // Remove "Citibank" prefix
+                      .replace(/^citibank\s+/i, '')
+                      .replace(/^citi\s+/i, '')
                       .trim()
-                      .replace(/\s+/g, ' '); // Normalize spaces
+                      .replace(/\s+/g, ' ');
                   };
                   
                   const normalizedApiName = normalizeName(cardName);
                   
                   return allCitibankCards.find(card => {
                     const normalizedCardName = normalizeName(card.cardName);
-                    // Check for exact match after normalization
                     return normalizedCardName === normalizedApiName;
                   });
                 };
@@ -1943,36 +1741,24 @@ export default function CreditJourneyScreen() {
                 const enrichedRecommendations = apiRecommendations.map((rec: any) => {
                   const matchedCard = matchCardByName(rec.cardName);
                   if (matchedCard) {
-                    // Merge API recommendation with static card data
-                    // API data (cardId, cardName, reason, suggestedUsage, fitScore) takes precedence
-                    const enriched = {
+                    return {
                       ...matchedCard,
-                      ...rec, // API data overrides static data
-                      // Preserve static card's id if API doesn't have one
+                      ...rec,
                       id: rec.id || matchedCard.id,
-                      // Ensure cardId is set (use API cardId if available, otherwise static cardId)
                       cardId: rec.cardId || matchedCard.cardId || matchedCard.id,
-                      // Preserve API cardName
                       cardName: rec.cardName || matchedCard.cardName,
                     };
-                    return enriched;
                   }
                   return rec;
                 });
                 
-                // Add all Citibank business cards that aren't already in recommendations
-                // Also check by cardName to avoid duplicates when API recommendations are enriched with static card data
+                // Add all Citibank personal cards that aren't already in recommendations
                 const enrichedCardNames = new Set(
                   enrichedRecommendations.map((r: any) => r.cardName?.toLowerCase().trim())
                 );
-                const mergedCards: (CitibankBusinessCard | any)[] = [...enrichedRecommendations];
-                console.log('📋 All Citibank cards count:', allCitibankCards.length);
-                console.log('📋 All Citibank card IDs:', allCitibankCards.map(c => c.id));
+                const mergedCards: (CitibankPersonalCard | any)[] = [...enrichedRecommendations];
                 
                 allCitibankCards.forEach(card => {
-                  // Check if card is already in API recommendations by comparing:
-                  // 1. cardId/id match
-                  // 2. cardName match (to catch enriched recommendations)
                   const cardIdToCheck = card.cardId || card.id;
                   const cardNameLower = card.cardName?.toLowerCase().trim();
                   const isDuplicate = 
@@ -1982,128 +1768,25 @@ export default function CreditJourneyScreen() {
                   
                   if (!isDuplicate) {
                     mergedCards.push(card);
-                    console.log('✅ Added card to mergedCards:', card.cardName, 'ID:', card.id);
-                  } else {
-                    console.log('⚠️ Skipped duplicate card:', card.cardName, 'ID:', card.id);
                   }
                 });
                 
-                console.log('📋 Total merged cards:', mergedCards.length);
-                
-                // Extract approval data once for all cards
-                const approvalData = extractApprovalData(profile, experianData, recommendations);
-                
-                // Calculate approval scores for all cards and sort by score (highest first)
-                const cardsWithScores = mergedCards.map((rec: any) => {
-                  const cardProfile: CitibankCardProfile = {
-                    cardName: rec.cardName || rec.name || 'Business Credit Card',
-                    difficultyRating: rec.difficultyRating || 'Medium',
-                    minPersonalFico: rec.minPersonalFico || 680,
-                    minBusinessRevenue: rec.minBusinessRevenue,
-                    minBusinessAge: rec.minBusinessAge || 6,
-                    expectedApprovalCLRange: rec.expectedApprovalCLRange,
-                    subDifficultyIndex: rec.subDifficultyIndex,
-                    rewardCategoryAlignment: rec.rewardCategoryAlignment || [],
-                    underwriterToleranceLevel: rec.underwriterToleranceLevel || 'Medium',
-                  };
-                  
-                  const approvalResult = calculateCitibankApprovalLikelihood(
-                    approvalData.personal,
-                    approvalData.business,
-                    approvalData.spend,
-                    cardProfile
-                  );
-                  
-                  return {
-                    ...rec,
-                    approvalResult,
-                    approvalScore: approvalResult.likelihoodScore,
-                  };
-                });
-                
-                // Separate API recommendations from static cards
-                const apiCards: any[] = [];
-                const staticCards: any[] = [];
-                
-                console.log('📊 Total cards with scores:', cardsWithScores.length);
-                console.log('📊 Card IDs:', cardsWithScores.map((c: any) => c.id || c.cardId));
-                
-                cardsWithScores.forEach((card: any) => {
-                  // Check if it's an API recommendation (UUID cardId)
-                  const isApiRecommendation = card.cardId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(card.cardId);
-                  if (isApiRecommendation) {
-                    apiCards.push(card);
-                  } else {
-                    // For static cards, filter out "Declined by Rule"
-                    // Always include Costco cards
-                    const isCostcoCard = card.id === 'costco-anywhere-visa-citi' || card.id === 'costco-anywhere-visa-business-citi';
-                    if (isCostcoCard || card.approvalResult?.recommendation !== 'Declined by Rule') {
-                      staticCards.push(card);
-                      console.log('✅ Added static card:', card.cardName || card.name, 'ID:', card.id);
-                    } else {
-                      console.log('❌ Filtered out card:', card.cardName || card.name, 'Reason:', card.approvalResult?.recommendation);
-                    }
-                  }
-                });
-                
-                console.log('📊 API cards:', apiCards.length);
-                console.log('📊 Static cards:', staticCards.length);
-                
-                // Sort API recommendations by fitScore (descending), then by approval score
-                apiCards.sort((a, b) => {
-                  const aFitScore = a.fitScore || 0;
-                  const bFitScore = b.fitScore || 0;
-                  if (bFitScore !== aFitScore) {
-                    return bFitScore - aFitScore;
-                  }
-                  return b.approvalScore - a.approvalScore;
-                });
-                
-                // Sort static cards by approval score (descending), then by fitScore
-                staticCards.sort((a, b) => {
-                  if (b.approvalScore !== a.approvalScore) {
-                    return b.approvalScore - a.approvalScore;
-                  }
-                  const aFitScore = a.fitScore || 0;
-                  const bFitScore = b.fitScore || 0;
-                  return bFitScore - aFitScore;
-                });
-                
-                // Combine: API recommendations first, then static cards
-                // Ensure Costco cards are always included
-                const costcoCards = cardsWithScores.filter((card: any) => 
-                  card.id === 'costco-anywhere-visa-citi' || 
-                  card.id === 'costco-anywhere-visa-business-citi'
-                );
-                
-                // Remove Costco cards from staticCards if they're already there, then add them at the end
-                const staticCardsWithoutCostco = staticCards.filter((card: any) => 
-                  card.id !== 'costco-anywhere-visa-citi' && 
-                  card.id !== 'costco-anywhere-visa-business-citi'
-                );
-                
-                const filteredCards = [...apiCards, ...staticCardsWithoutCostco, ...costcoCards];
-                
-                console.log('📊 Final filtered cards count:', filteredCards.length);
-                console.log('📊 Final card names:', filteredCards.map((c: any) => c.cardName || c.name));
+                // Use all merged cards (no approval score calculation needed for personal cards)
+                const filteredCards = mergedCards;
                 
                 return filteredCards.length > 0 ? (
                   filteredCards.map((rec: any, index: number) => {
-                    // Use the pre-calculated approval result
-                    const approvalResult = rec.approvalResult;
-                    const displayFitScore = rec.fitScore || (approvalResult.likelihoodScore / 100);
-                  
                   // Use cardId as key (unique UUID for API recommendations, or id for static cards)
                   // Fallback to index if neither exists
                   const uniqueKey = rec.cardId || rec.id || `card-${index}`;
                   
                   return (
                   <View key={uniqueKey} style={styles.businessOfferCard}>
-                    {/* Top Recommendation Badge for highest scores */}
-                    {index === 0 && approvalResult.likelihoodScore >= 75 && (
+                    {/* Top Recommendation Badge */}
+                    {index === 0 && (
                       <View style={styles.topRecommendationBadge}>
                         <IconSymbol name="star.fill" size={16} color="#FFD700" />
-                        <Text style={styles.topRecommendationText}>Top Recommendation</Text>
+                        <Text style={styles.topRecommendationText}>Featured Offer</Text>
                       </View>
                     )}
                     
@@ -2114,20 +1797,25 @@ export default function CreditJourneyScreen() {
                             ? rec.cardImage 
                             : rec.cardImage && typeof rec.cardImage === 'string' && rec.cardImage.startsWith('http')
                             ? { uri: rec.cardImage }
-                            : getCardImageSource(rec.id || rec.cardId || '', index)
+                            : getPersonalCardImageSource(rec.id || rec.cardId || '', index)
                         }
                         style={styles.cardImage}
                       />
                       <View style={{flex: 1}}>
                         <View style={styles.businessCardHeader}>
-                          {(rec.fitScore || displayFitScore) && (
+                          {(rec.fitScore || rec.fitScore === 0) && (
                             <View style={styles.fitScoreBadge}>
-                              <Text style={styles.fitScoreText}>{((rec.fitScore || displayFitScore) * 100).toFixed(0)}% Match</Text>
+                              <Text style={styles.fitScoreText}>{((rec.fitScore || 0) * 100).toFixed(0)}% Match</Text>
                             </View>
                           )}
                         </View>
-                        <Text style={styles.businessCardTitle}>{rec.cardName || rec.name || 'Business Credit Card'}</Text>
-                        <Text style={styles.businessCardSubtitle}>Citibank Business Credit Card</Text>
+                        <Text style={styles.businessCardTitle}>{rec.cardName || rec.name || 'Citi Credit Card'}</Text>
+                        {rec.tagline && (
+                          <Text style={styles.businessCardSubtitle}>{rec.tagline}</Text>
+                        )}
+                        {rec.rewards?.primary && (
+                          <Text style={styles.rewardsText}>{rec.rewards.primary}</Text>
+                        )}
                       </View>
                     </View>
                     
@@ -2293,7 +1981,7 @@ export default function CreditJourneyScreen() {
                           const cardId = rec.cardId || rec.id;
                           const cardName = rec.cardName || rec.name;
                           // Get card-specific application URL
-                          const applyUrl = rec.applyUrl || getCardApplyUrl(cardId, cardName) || undefined;
+                          const applyUrl = rec.applyUrl || getPersonalCardApplyUrl(cardId, cardName) || undefined;
                           handleApplyNow(cardId, applyUrl);
                         }}
                       >
@@ -2307,7 +1995,7 @@ export default function CreditJourneyScreen() {
                       <TouchableOpacity 
                         style={styles.detailsButton}
                         onPress={async () => {
-                          const detailsUrl = rec.detailsUrl || getCardDetailsUrl(rec.cardId || rec.id, rec.cardName || rec.name);
+                          const detailsUrl = rec.detailsUrl || getPersonalCardDetailsUrl(rec.cardId || rec.id, rec.cardName || rec.name);
                           if (detailsUrl) {
                             const supported = await Linking.canOpenURL(detailsUrl);
                             if (supported) {
@@ -2326,7 +2014,7 @@ export default function CreditJourneyScreen() {
               })()}
               
               {/* Show message if no cards available at all */}
-              {!isLoading && !error && (!recommendations?.recommendations || recommendations.recommendations.length === 0) && getAllCitibankBusinessCards().length === 0 && (
+              {!isLoading && !error && (!recommendations?.recommendations || recommendations.recommendations.length === 0) && getAllCitibankPersonalCards().length === 0 && (
                 <View style={styles.noRecommendationsContainer}>
                   <IconSymbol name="info.circle" size={48} color="#8E8E93" />
                   <Text style={styles.noRecommendationsText}>No credit cards available</Text>
@@ -3190,6 +2878,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000000',
     marginBottom: scaleVertical(4),
+  },
+  rewardsText: {
+    fontSize: scaleFont(14),
+    fontWeight: '600',
+    color: '#0066CC',
+    marginTop: scaleVertical(4),
   },
   businessCardSubtitle: {
     fontSize: scaleFont(14),

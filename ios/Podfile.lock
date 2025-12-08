@@ -1,7 +1,7 @@
 PODS:
   - EXApplication (7.0.7):
     - ExpoModulesCore
-  - EXConstants (18.0.10):
+  - EXConstants (18.0.11):
     - ExpoModulesCore
   - Expo (54.0.21):
     - ExpoModulesCore
@@ -2392,7 +2392,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   EXApplication: a9d1c46d473d36f61302a9a81db2379441f3f094
-  EXConstants: e6e50cdfcb4524f40121d1fdcff24e97b7dcd2fd
+  EXConstants: 42beb731d147822313b2340b8bb9ebe7a38a3762
   Expo: 795e9f87aca407bf92895d54ae5f7777fc1f3fbc
   ExpoAsset: 3c3b7dd9b1318846a02ef05ce420e63d542aeb9f
   ExpoCrypto: 4c50a152f5939e16a2ca10be77b002a3a391c4d3
